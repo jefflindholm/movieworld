@@ -20484,7 +20484,10 @@
 	                _react2.default.createElement(
 	                    "div",
 	                    { className: "panel-body" },
-	                    this.props.movie.ratingCode
+	                    "Rating: " + this.props.movie.ratingCode + " genres: ",
+	                    this.props.movie.genres.map(function (g) {
+	                        return g.name;
+	                    }).join(',')
 	                )
 	            );
 	        }

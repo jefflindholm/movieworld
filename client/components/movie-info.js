@@ -8,7 +8,10 @@ export default class MovieInfo extends React.Component {
                     {this.props.movie.title}
                 </div>
                 <div className="panel-body">
-                    {this.props.movie.ratingCode}
+                    {`Rating: ${this.props.movie.ratingCode} genres: `}
+                    {
+                        this.props.movie.genres.map(g => g.name).join(',')
+                    }
                 </div>
             </div>
         );
