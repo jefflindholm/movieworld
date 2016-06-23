@@ -9,7 +9,7 @@ const Columns = [
 ];
 
 const table = new SqlTable({
-    name: 'users',
+    name: 'movie',
     columns: Columns
 });
 module.exports =  table;
