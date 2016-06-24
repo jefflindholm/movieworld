@@ -308,6 +308,20 @@ es2015 and stage-0 so we can take advantage of new features in javascript
 I like to have my webpack run eslint when it builds so I included the items needed
 to allow that to happen
 
+make a change to the package.json file to add a script
+```
+  "scripts": {
+    "start": "supervisor ./bin/www",
+    "build": "webpack"
+  },
+```
+now you can execute:
+```
+npm run build
+```
+to build the webpack bundle.js file
+
+
 make changes to the app.js file to serve our client pages
 
 ```javascript
