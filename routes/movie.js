@@ -51,7 +51,12 @@ router.get('/:id', (req, res, next) => {
                         .where(movie.id.eq(req.params.id));
     executeSimpleQuery(query)
                 .then((data) => {
-                    res.send(data);
+                    if ( data.length > 0 ) {
+                        getGenre(data[0])
+                            .then(() => res.send(data[0]));
+                    } else {
+                        res.status(404).send(`${req.params.id} Not found`);
+                    }
                 })
                 .catch(err => {
                     console.log(err);
