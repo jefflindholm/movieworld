@@ -294,10 +294,20 @@ app.use('/genre', genre);
 create a react client
 ```
 npm i --save react react-dom
+npm i --save-dev babel-cli babel-core babel-eslint
+npm i --save-dev babel-preset-es2015 babel-preset-stage-0 babel-preset-react
+npm i --save-dev webpack babel-loader
+npm i --save-dev eslint eslint-loader eslint-plugin-react
 mkdir client
 mkdir client/dist
 mkdir client/components
 ```
+we will be using webpack to to the transpiling of our react app, we are adding
+es2015 and stage-0 so we can take advantage of new features in javascript
+
+I like to have my webpack run eslint when it builds so I included the items needed
+to allow that to happen
+
 make changes to the app.js file to serve our client pages
 
 ```javascript
