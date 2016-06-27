@@ -302,6 +302,7 @@ mkdir client
 mkdir client/dist
 mkdir client/components
 ```
+
 we will be using webpack to to the transpiling of our react app, we are adding
 es2015 and stage-0 so we can take advantage of new features in javascript
 
