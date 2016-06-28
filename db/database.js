@@ -23,6 +23,7 @@ const database = new Sequelize(config.database,
 setDefaultOptions({
     sqlStartChar: '"',
     sqlEndChar: '"',
+    namedValueMarker: '$'
 });
 
 function executeComplexQuery(query) {
@@ -31,11 +32,11 @@ function executeComplexQuery(query) {
     try {
         const data = database.query(sql.fetchSql, {
             type: database.QueryTypes.SELECT,
-            replacements: sql.values
+            bind: sql.values
         });
         const count = database.query(sql.countSql, {
             type: database.QueryTypes.SELECT,
-            replacements: sql.values
+            bind: sql.values
         });
         return { data, count };
     } catch (err) {
@@ -49,7 +50,46 @@ function executeSimpleQuery(query) {
     try {
         const data = database.query(sql.fetchSql, {
             type: database.QueryTypes.SELECT,
-            replacements: sql.values
+            bind: sql.values
+        });
+        return data;
+    } catch (err) {
+        console.log(err);
+    }
+    return null;
+}
+
+function executeInsert(cmd) {
+    try {
+        const data = database.query(cmd.sql, {
+            type: database.QueryTypes.INSERT,
+            bind: cmd.values
+        });
+        return data;
+    } catch (err) {
+        console.log(err);
+    }
+    return null;
+}
+
+function executeUpdate(cmd) {
+    try {
+        const data = database.query(cmd.sql, {
+            type: database.QueryTypes.UPDATE,
+            bind: cmd.values
+        });
+        return data;
+    } catch (err) {
+        console.log(err);
+    }
+    return null;
+}
+
+function executeDelete(cmd) {
+    try {
+        const data = database.query(cmd.sql, {
+            type: database.QueryTypes.DELETE,
+            bind: cmd.values
         });
         return data;
     } catch (err) {
@@ -61,5 +101,8 @@ function executeSimpleQuery(query) {
 module.exports = {
     executeSimpleQuery,
     executeComplexQuery,
+    executeInsert,
+    executeUpdate,
+    executeDelete,
     database,
 };

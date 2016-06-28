@@ -1,3 +1,64 @@
+# Database setup
+This assumes you are using Postgres and using the command line (psql) to create the Database
+```sql
+CREATE DATABASE movieworld;
+\c movieworld;
+CREATE TABLE movie(
+    id SERIAL PRIMARY KEY,
+    title TEXT,
+    duration INT
+);
+CREATE TABLE genre(
+    id SERIAL PRIMARY KEY,
+    name TEXT
+);
+CREATE TABLE movie_genre(
+    movie_id INT REFERENCES movie(id),
+    genre_id INT REFERENCES genre(id),
+    PRIMARY KEY (movie_id, genre_id)
+);
+CREATE TABLE movie_rating(
+    id SERIAL PRIMARY KEY,
+    rating_code TEXT,
+    description TEXT
+);
+ALTER TABLE movie
+    ADD COLUMN movie_rating_id INT
+        REFERENCES movie_rating(id);
+\q
+```
+I made all the string columns TEXT since in Postgres the underlying type is always
+TEXT even for VARCHAR(x) you would limit the text in your UI and DAL.
+
+Insert some data, here are some examples:
+```sql
+INSERT INTO movie_rating (rating_code, description)
+VALUES
+('G', 'General Audiences'),
+('PG', 'Parental Guidance Suggested'),
+('PG-13', 'Parents Strongly Cautioned'),
+('R', 'Restricted'),
+('NC-17', 'Adults Only');
+
+INSERT INTO genre (name)
+VALUES
+('Comedy'),
+('Action'),
+('Romance'),
+('Suspense');
+('Science Fiction'),
+('Horror');
+
+INSERT INTO movie (title, duration, movie_rating_id)
+VALUES
+('The Avengers', 143, 3), --PG-13
+('A Scanner Darkly', 100, 4), --R
+('A Nightmare on Elm Street', 86, 4), --R
+('Toy Story', 81, 1), --G
+('This Is 40', 134, 4); --R
+```
+Add some genre(s) to the movies on your own.....
+
 # STEP-ONE
 
 ```
@@ -569,4 +630,541 @@ export default class MovieInfo extends React.Component {
         );
     }
 }
+```
+
+# STEP SIX
+Lets hook up a form to add/edit movies
+
+```
+npm i --save-dev style-loader css-loader
+npm i --save react-select-plus
+```
+1. Add loaders required for CCS files being imported
+2. Add a single and multi-select control
+
+```json
+"scripts": {
+  "start": "supervisor -w routes -w db ./bin/www",
+  "build": "webpack --progrss --colors",
+  "webpack": "webpack --progress --colors --watch"
+},
+```
+1. Have supervisor watch **routes** and **db** directories
+2. add colors etc to webpack build
+3. add a new webpack that watches for changes
+
+Lets create a new form to handle input of a movie and its details.
+```javascript
+// client/components/movie-form.js
+import React from 'react';
+import Select from 'react-select-plus';
+import NumberInput from '../controls/number-input';
+import 'react-select-plus/dist/react-select-plus.css';
+
+export default class MovieForm extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            title: '',
+            duration: 0,
+            rating: null,
+            ratings: [],
+            genres: [],
+            selectedRating: null,
+            selectedGenres: [],
+        };
+    }
+    componentDidMount() {
+        fetch('http://localhost:3000/movie_rating', {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+        .then(data => {
+            return data.json();
+        })
+        .then(json => {
+            const ratings = json.map(rating => {
+                return {label: `${rating.ratingCode} - ${rating.description}`, value: rating.id};
+            });
+            this.setState({ratings});
+        });
+        fetch('http://localhost:3000/genre', {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+        .then(data => {
+            return data.json();
+        })
+        .then(json => {
+            const genres = json.map(genre => {
+                return {label: genre.name, value: genre.id};
+            });
+            this.setState({genres});
+        });
+    }
+    save = () => {
+        const movie = {
+            title: this.state.title,
+            duration: this.state.duration,
+            movieRatingId: this.state.selectedRating.value,
+            genres: this.state.selectedGenres.map(g => g.value),
+        };
+        console.log('save', movie);
+    };
+    clear = () => {
+        this.setState({
+            title: '',
+            duration: 0,
+            rating: null,
+            selectedRating: null,
+            selectedGenres: [],
+        });
+    }
+    handleInputChange = (e) => {
+        e.preventDefault();
+        const name = e.target.name;
+        const newState = Object.assign({}, this.state);
+        newState[name] = e.target.value;
+        this.setState(newState);
+    };
+    valueChange = (val) => {
+        this.setState({duration: val});
+    };
+    ratingSelected = (val) => {
+        this.setState({selectedRating: val});
+    };
+    genreSelected = (val) => {
+        this.setState({selectedGenres: val});
+    };
+    render() {
+        return (
+            <div className="form">
+                <div className="form-group">
+                    <label className="control-label" htmlFor="title">Title:</label>
+                    <input type="text"
+                            className="form-control"
+                            id="title"
+                            name="title"
+                            value={this.state.title}
+                            onChange={this.handleInputChange}
+                            placeholder="Enter Movie Title" />
+                </div>
+                <div className="form-group">
+                    <label className="control-label" htmlFor="duration">Duration:</label>
+                    <NumberInput
+                        id="duration"
+                        name="duration"
+                        min={0}
+                        className="form-control"
+                        value={this.state.duration}
+                        onChange={this.handleInputChange}
+                        onValueChange={this.valueChange}
+                        placeholder="Minutes" />
+                </div>
+                <div className="form-group">
+                    <label className="control-label" htmlFor="rating">Rating:</label>
+                    <Select name="rating"
+                            value={this.state.selectedRating}
+                            onChange={this.ratingSelected}
+                            options={this.state.ratings}
+                            placeholder="Select rating"
+                            />
+                </div>
+                <div className="form-group">
+                    <label className="control-label" htmlFor="genre">Genres:</label>
+                    <Select name="genre"
+                            multi
+                            value={this.state.selectedGenres}
+                            onChange={this.genreSelected}
+                            options={this.state.genres}
+                            placeholder="Select genre(s)"
+                            />
+                </div>
+                <div className="form-group">
+                    <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>Save</button>
+                    <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.clear}>Clear</button>
+                </div>
+            </div>
+        );
+    }
+}
+```
+
+I used a new control NumberInput, so now lets create that control.
+
+Create a control to handle the numeric input of the duration
+```javascript
+// client/controls/number-input.js
+import React from 'react';
+
+export default class NumberInput extends React.Component {
+    static propTypes = {
+        value: React.PropTypes.number,
+        min: React.PropTypes.number,
+        max: React.PropTypes.number,
+        step: React.PropTypes.number,
+        onChange: React.PropTypes.func.isRequired,
+        onValueChange: React.PropTypes.func.isRequired,
+        format: React.PropTypes.func,
+    };
+    static defaultProps = {
+        value: '0',
+        step: 1,
+        format: (x) => x,
+        min: Number.MIN_SAFE_INTEGER,
+        max: Number.MAX_SAFE_INTEGER,
+    };
+    onKeyDown = (e) => {
+        if (e.which === 38) {
+            console.log('up');
+            // UP
+            e.preventDefault();
+            const value = Math.min(this.props.value + this.props.step, this.props.max);
+            this.props.onValueChange(value);
+        } else if (e.which === 40) {
+            console.log('down');
+            // DOWN
+            e.preventDefault();
+            const value = Math.max(this.props.value - this.props.step, this.props.min);
+            this.props.onValueChange(value);
+        } else {
+            // backspace, delete, tab, enter, esc, and .
+            const codes = [46, 8, 9, 13, 27, 110, 190];
+            if ( (codes.indexOf(e.which, codes) !== -1) ||
+                // Allow: Ctrl+A, Command+A
+                (e.which === 65 && ( e.ctrlKey === true || e.metaKey === true ) ) ||
+                // Allow: home, end, left, right, down, up
+                (e.which >= 35 && e.which <= 40)) {
+                // let it happen, don't do anything
+                return;
+            }
+            // Ensure that it is a number and stop the keypress
+            if ((e.shiftKey || (e.which < 48 || e.which > 57)) && (e.which < 96 || e.which > 105)) {
+                e.preventDefault();
+            }
+        }
+    };
+    render() {
+        return (
+            <input className={this.props.className}
+                id={this.props.id}
+                name={this.props.name}
+                type="text"
+                onKeyDown={this.onKeyDown}
+                onChange={this.props.onChange}
+                value={this.props.format(this.props.value)} />
+        );
+    }
+}
+```
+```javascript
+static propTypes = {
+    value: React.PropTypes.number,
+    min: React.PropTypes.number,
+    max: React.PropTypes.number,
+    step: React.PropTypes.number,
+    onChange: React.PropTypes.func.isRequired,
+    onValueChange: React.PropTypes.func.isRequired,
+    format: React.PropTypes.func,
+};
+```
+The above is a way to ensure that the correct types are passed for our props, and that
+required properties are always passed.
+
+```javascript
+static defaultProps = {
+    value: '0',
+    step: 1,
+    format: (x) => x,
+    min: Number.MIN_SAFE_INTEGER,
+    max: Number.MAX_SAFE_INTEGER,
+};
+```
+The above is used to set the values of properties that are not required, but we
+want to have a value defaulted so we don't have to check for null or undefined everywhere.
+
+
+Lets add the new form to the movie-list.js file
+```javascript
+// client/components/movie-list.js
+import React from 'react';
+import MovieInfo from './movie-info';
+import MovieForm from './movie-form';
+
+export default class MovieList extends React.Component {
+    render() {
+        return (
+            <div className="row">
+                <div className="col-md-6">
+                    <MovieForm />
+                </div>
+                <div className="col-md-6">
+                    {
+                        this.props.movies.map((movie, idx) => {
+                            return (
+                                <MovieInfo movie={movie} key={`movie-${idx}`} />
+                            );
+                        })
+                    }
+                </div>
+            </div>
+        );
+    }
+}
+```
+
+We want to save the information for a movie so we need to add a couple helper
+functions to the **db/database.js** file.
+```javascript
+// db.database.js
+...
+function executeInsert(cmd) {
+    try {
+        const data = database.query(cmd.sql, {
+            type: database.QueryTypes.INSERT,
+            bind: cmd.values
+        });
+        return data;
+    } catch (err) {
+        console.log(err);
+    }
+    return null;
+}
+
+function executeUpdate(cmd) {
+    try {
+        const data = database.query(cmd.sql, {
+            type: database.QueryTypes.UPDATE,
+            bind: cmd.values
+        });
+        return data;
+    } catch (err) {
+        console.log(err);
+    }
+    return null;
+}
+
+function executeDelete(cmd) {
+    try {
+        const data = database.query(cmd.sql, {
+            type: database.QueryTypes.DELETE,
+            bind: cmd.values
+        });
+        return data;
+    } catch (err) {
+        console.log(err);
+    }
+    return null;
+}
+
+module.exports = {
+    executeSimpleQuery,
+    executeComplexQuery,
+    executeInsert,
+    executeUpdate,
+    executeDelete,
+    database,
+};
+```
+
+OK so we are not saving anything we enter, so lets add a route that is a POST to
+the movie endpoint on the server.
+I am going to refactor the file a little.
+1. pull out getMovies() to its own function
+2. pull out the code to get a movie based on id
+  * change it to allow for any piece of the movie object
+  * add the Promise.resolve(null) when no data found
+3. add the new post route for insert
+4. add the new patch route for the update
+  * patch will update only the fields past
+  * we are making an assumption if they pass genres, they pass the complete list
+5. add the new delete route for the movie
+
+```javascript
+// routes/movie.js
+/* global Promise */
+/* eslint-disable no-param-reassign */
+const express = require('express');
+const router = express.Router();
+const CircularJSON = require('circular-json');
+
+const {SqlQuery, SqlBuilder} = require('fluent-sql');
+const {executeSimpleQuery, executeInsert, executeUpdate, executeDelete} = require('../db/database');
+
+const movie = require('../db/models/movie');
+const genre = require('../db/models/genre');
+const movie_genre = require('../db/models/movie-genre');
+const movie_rating = require('../db/models/movie-rating');
+
+function getGenre(theMovie) {
+    const query = new SqlQuery()
+                    .from(genre)
+                    .select(genre.name)
+                    .join(movie_genre.on(movie_genre.genreId).using(genre.id))
+                    .where(movie_genre.movieId.eq(theMovie.id));
+    return executeSimpleQuery(query)
+            .then(data => {
+                theMovie.genres = data;
+            });
+}
+function getMovies() {
+    const query = new SqlQuery()
+                        .from(movie)
+                        .select(movie.id, movie.title, movie.duration)
+                        .join(movie_rating.on(movie_rating.id).using(movie.movieRatingId))
+                        .select(movie_rating.ratingCode);
+    return executeSimpleQuery(query)
+                .then((data) => {
+                    const promises = data.map(movie => {
+                        return getGenre(movie);
+                    });
+                    return Promise.all(promises).then(() => data);
+                });
+}
+function getMovie(item) {
+    let query = new SqlQuery()
+                        .from(movie)
+                        .select(movie.id, movie.title, movie.duration)
+                        .join(movie_rating.on(movie_rating.id).using(movie.movieRatingId))
+                        .select(movie_rating.ratingCode);
+    if ( item.id ) {
+        query = query.where(movie.id.eq(item.id));
+    }
+    if ( item.title ) {
+        query = query.where(movie.title.eq(item.title));
+    }
+    if ( item.duration ) {
+        query = query.where(movie.duration.eq(item.duration));
+    }
+    if ( item.movieRatingId ) {
+        query = query.where(movie.movieRatingId.eq(item.movieRatingId));
+    }
+    return executeSimpleQuery(query)
+                .then((data) => {
+                    if ( data.length > 0 ) {
+                        return getGenre(data[0]).then(() => data[0]);
+                    } else {
+                        return Promise.resolve(null);
+                    }
+                });
+}
+router.get('/', (req, res, next) => {
+    getMovies()
+        .then((data) => {
+            res.send(data);
+        })
+        .catch(err => {
+            console.log(err);
+            next(err);
+        });
+});
+router.get('/:id', (req, res, next) => {
+    getMovie({id: req.params.id})
+        .then((data) => {
+            if ( data ) {
+                res.send(data);
+            } else {
+                res.status(404).send(`${req.params.id} Not found`);
+            }
+        })
+        .catch(err => {
+            console.log(err);
+            next(err);
+        });
+});
+router.post('/', (req, res, next) => {
+    const insertMovie = SqlBuilder.insert(movie, req.body);
+    executeInsert(insertMovie)
+        .then(() => {
+            return getMovie(req.body);
+        })
+        .then((data) => {
+            if (req.body.genres) {
+                const promises = req.body.genres.map(g => {
+                    const tmp = SqlBuilder.insert(movie_genre, {movieId: data.id, genreId: g});
+                    return executeInsert(tmp);
+                });
+                return Promise.all(promises).then(() => data);
+            } else {
+                return data;
+            }
+        })
+        .then(data => {
+            return getMovie(data);
+        })
+        .then(data => {
+            res.send(data);
+        })
+        .catch(err => {
+            console.log(err);
+            next(err);
+        });
+});
+router.patch('/:id', (req, res, next) => {
+    const data = Object.assign({}, req.body, {id: req.params.id});
+    let promise;
+    if ( data.title || data.duration || data.movieRatingId ) {
+        const updateMovie = SqlBuilder.update(movie, data);
+        promise = executeUpdate(updateMovie)
+                .then(() => {
+                    if ( req.body.genres ) {
+                        return Promise.resolve(executeDelete(SqlBuilder.delete(movie_genre, {movieId: data.id})));
+                    } else {
+                        return Promise.resolve(null);
+                    }
+                });
+
+    } else if ( req.body.genres ) {
+        promise = executeDelete(SqlBuilder.delete(movie_genre, {movieId: data.id}));
+    } else {
+        res.status(204);
+        return;
+    }
+    promise
+        .then(() => {
+            if (req.body.genres ) {
+                const promises = req.body.genres.map(g => {
+                    const tmp = SqlBuilder.insert(movie_genre, {movieId: data.id, genreId: g});
+                    return executeInsert(tmp);
+                });
+                return Promise.all(promises).then(() => null);
+            } else {
+                return Promise.resolve(null);
+            }
+        })
+        .then(() => {
+            return getMovie(req.body);
+        })
+        .then(data => {
+            res.send(data);
+        })
+        .catch(err => {
+            console.log(err);
+            next(err);
+        });
+});
+router.delete('/:id', (req, res, next) => {
+    const deleteMovie = SqlBuilder.delete(movie, {id: req.params.id});
+    const deleteRatings = SqlBuilder.delete(movie_genre, {movieId: req.params.id});
+    console.log(CircularJSON.stringify(deleteMovie, null, 2));
+    console.log(CircularJSON.stringify(deleteRatings, null, 2));
+    executeDelete(deleteRatings)
+        .then(() => {
+            return executeDelete(deleteMovie);
+        })
+        .then(() => {
+            return getMovies();
+        })
+        .then(data => res.send(data))
+        .catch(err => {
+            console.log(err);
+            next(err);
+        });
+});
+
+module.exports = router;
 ```
