@@ -664,6 +664,7 @@ import React from 'react';
 import Select from 'react-select-plus';
 import NumberInput from '../controls/number-input';
 import 'react-select-plus/dist/react-select-plus.css';
+import 'fluent-sql/dist/string';
 
 export default class MovieForm extends React.Component {
     constructor() {
@@ -789,7 +790,7 @@ export default class MovieForm extends React.Component {
                             />
                 </div>
                 <div className="form-group">
-                    <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>Save</button>
+                <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>{this.state.action.toLowerCase().capitalizeFirst()}</button>
                     <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.clear}>Clear</button>
                 </div>
             </div>
@@ -797,6 +798,20 @@ export default class MovieForm extends React.Component {
     }
 }
 ```
+```javascript
+import 'fluent-sql/dist/string';
+```
+this line brings in a utility file from the fluent-sql project (http://github.com/jefflindholm/fluent-sql)
+that adds the following to string
+ * toCamel - expects strings like **some-string** or **some_string** returns **someString**
+ * toDashCase - expects string **SomeString** or **SomeString** returns **some-string**
+ * toSnakeCase - expects string **SomeString** or **SomeString** returns **some_string**
+ * capitalizeFirst - just upper cases first character regardless of the rest of the string
+ * toPascal - same as toCamel except returns **SomeString**
+ * trim - removes spaces from begin and end
+ * contains - boolean for whether or not string has passed value
+ 
+It will only add a method that does not exist on String
 
 I used a new control NumberInput, so now lets create that control.
 
@@ -1242,12 +1257,14 @@ save = () => {
     };
 
     let verb;
+    let url = 'http://localhost:3000/movie';
     if ( this.state.action === 'ADD') {
         verb = 'POST';
     } else if ( this.state.action === 'UPDATE') {
         verb = 'PATCH';
+        url = `${url}/${this.props.id}`;
     }
-    fetch('http://localhost:3000/movie', {
+    fetch(url, {
         method: verb,
         headers: {
             Accept: 'application/json',

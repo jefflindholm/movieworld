@@ -3,6 +3,7 @@ import React from 'react';
 import Select from 'react-select-plus';
 import NumberInput from '../controls/number-input';
 import 'react-select-plus/dist/react-select-plus.css';
+import 'fluent-sql/dist/string';
 
 export default class MovieForm extends React.Component {
     static propTypes = {
@@ -39,6 +40,7 @@ export default class MovieForm extends React.Component {
             duration: newProps.duration,
             selectedRating,
             selectedGenres,
+            action: newProps.title ? 'UPDATE' : 'ADD',
         });
     }
     componentDidMount() {
@@ -82,12 +84,14 @@ export default class MovieForm extends React.Component {
         };
 
         let verb;
+        let url = 'http://localhost:3000/movie';
         if ( this.state.action === 'ADD') {
             verb = 'POST';
         } else if ( this.state.action === 'UPDATE') {
             verb = 'PATCH';
+            url = `${url}/${this.props.id}`;
         }
-        fetch('http://localhost:3000/movie', {
+        fetch(url, {
             method: verb,
             headers: {
                 Accept: 'application/json',
@@ -174,7 +178,7 @@ export default class MovieForm extends React.Component {
                             />
                 </div>
                 <div className="form-group">
-                    <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>Save</button>
+                    <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>{this.state.action.toLowerCase().capitalizeFirst()}</button>
                     <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.clear}>Clear</button>
                 </div>
             </div>
