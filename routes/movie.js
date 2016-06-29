@@ -2,7 +2,7 @@
 /* eslint-disable no-param-reassign */
 const express = require('express');
 const router = express.Router();
-const CircularJSON = require('circular-json');
+const CircularJSON = require('circular-json'); // eslint-disable-line no-unused-vars
 
 const {SqlQuery, SqlBuilder} = require('fluent-sql');
 const {executeSimpleQuery, executeInsert, executeUpdate, executeDelete} = require('../db/database');
@@ -17,6 +17,7 @@ function getGenre(theMovie) {
                     .from(genre)
                     .select(genre.name)
                     .join(movie_genre.on(movie_genre.genreId).using(genre.id))
+                    .select(movie_genre.genreId)
                     .where(movie_genre.movieId.eq(theMovie.id));
     return executeSimpleQuery(query)
             .then(data => {
@@ -26,7 +27,7 @@ function getGenre(theMovie) {
 function getMovies() {
     const query = new SqlQuery()
                         .from(movie)
-                        .select(movie.id, movie.title, movie.duration)
+                        .select(movie.id, movie.title, movie.duration, movie.movieRatingId)
                         .join(movie_rating.on(movie_rating.id).using(movie.movieRatingId))
                         .select(movie_rating.ratingCode)
                         .orderBy(movie.title);
@@ -163,8 +164,6 @@ router.patch('/:id', (req, res, next) => {
 router.delete('/:id', (req, res, next) => {
     const deleteMovie = SqlBuilder.delete(movie, {id: req.params.id});
     const deleteRatings = SqlBuilder.delete(movie_genre, {movieId: req.params.id});
-    console.log(CircularJSON.stringify(deleteMovie, null, 2));
-    console.log(CircularJSON.stringify(deleteRatings, null, 2));
     executeDelete(deleteRatings)
         .then(() => {
             return executeDelete(deleteMovie);

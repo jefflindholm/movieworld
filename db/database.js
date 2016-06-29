@@ -28,7 +28,6 @@ setDefaultOptions({
 
 function executeComplexQuery(query) {
     const sql = query.genSql();
-    console.log('sql', CircularJSON.stringify(sql, null, 2));
     try {
         const data = database.query(sql.fetchSql, {
             type: database.QueryTypes.SELECT,
@@ -46,7 +45,6 @@ function executeComplexQuery(query) {
 }
 function executeSimpleQuery(query) {
     const sql = query.genSql();
-    console.log('sql', CircularJSON.stringify(sql, null, 2));
     try {
         const data = database.query(sql.fetchSql, {
             type: database.QueryTypes.SELECT,

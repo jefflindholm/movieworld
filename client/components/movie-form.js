@@ -1,3 +1,4 @@
+// client/components/movie-form.js
 import React from 'react';
 import Select from 'react-select-plus';
 import NumberInput from '../controls/number-input';
@@ -6,19 +7,39 @@ import 'react-select-plus/dist/react-select-plus.css';
 export default class MovieForm extends React.Component {
     static propTypes = {
         onChanges: React.PropTypes.func.isRequired,
+        title: React.PropTypes.string,
+        duration: React.PropTypes.number,
+        genres: React.PropTypes.array,
+        rating: React.PropTypes.number,
+    };
+    static defaultProps = {
+        genres: [],
+        title: '',
+        duration: 0,
     };
     constructor() {
         super();
         this.state = {
             title: '',
             duration: 0,
-            rating: null,
             ratings: [],
             genres: [],
             selectedRating: null,
             selectedGenres: [],
             action: 'ADD',
         };
+    }
+    componentWillReceiveProps(newProps) {
+        const selectedRating = this.state.ratings.find((i) => (i.value === newProps.movieRatingId));
+        const selectedGenres = newProps.genres.map((g => {
+            return this.state.genres.find((genre) => (g.genreId === genre.value));
+        }));
+        this.setState({
+            title: newProps.title,
+            duration: newProps.duration,
+            selectedRating,
+            selectedGenres,
+        });
     }
     componentDidMount() {
         fetch('http://localhost:3000/movie_rating', {
@@ -59,34 +80,28 @@ export default class MovieForm extends React.Component {
             movieRatingId: this.state.selectedRating.value,
             genres: this.state.selectedGenres.map(g => g.value),
         };
-        let promise;
+
+        let verb;
         if ( this.state.action === 'ADD') {
-            // post the data
-            promise = fetch('http://localhost:3000/genre', {
-                method: 'POST',
-                body: JSON.stringify(movie),
-                headers: {
-                    Accept: 'application/json',
-                },
-            });
+            verb = 'POST';
         } else if ( this.state.action === 'UPDATE') {
-            // patch the data
-            promise = fetch('http://localhost:3000/genre', {
-                method: 'PATCH',
-                body: JSON.stringify(movie),
-                headers: {
-                    Accept: 'application/json',
-                },
-            });
+            verb = 'PATCH';
         }
-        promise
-            .then(() => {
-                this.props.onChanges();
-                this.clear();
-            })
-            .catch(err => {
-                alert(err);
-            });
+        fetch('http://localhost:3000/movie', {
+            method: verb,
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(movie),
+        })
+        .then(() => {
+            this.props.onChanges();
+            this.clear();
+        })
+        .catch(err => {
+            alert(err);
+        });
     };
     clear = () => {
         this.setState({
@@ -118,20 +133,20 @@ export default class MovieForm extends React.Component {
         return (
             <div className="form">
                 <div className="form-group">
-                    <label className="control-label" htmlFor="title">Title:</label>
+                    <label className="control-label" htmlFor="movieTitle">Title:</label>
                     <input type="text"
                             className="form-control"
-                            id="title"
-                            name="title"
+                            id="movieTitle"
+                            name="movieTitle"
                             value={this.state.title}
                             onChange={this.handleInputChange}
                             placeholder="Enter Movie Title" />
                 </div>
                 <div className="form-group">
-                    <label className="control-label" htmlFor="duration">Duration:</label>
+                    <label className="control-label" htmlFor="movieDuration">Duration:</label>
                     <NumberInput
-                        id="duration"
-                        name="duration"
+                        id="movieDuration"
+                        name="movieDuration"
                         className="form-control"
                         min={0}
                         value={this.state.duration}
@@ -140,8 +155,8 @@ export default class MovieForm extends React.Component {
                         placeholder="Minutes" />
                 </div>
                 <div className="form-group">
-                    <label className="control-label" htmlFor="rating">Rating:</label>
-                    <Select name="rating"
+                    <label className="control-label" htmlFor="ratingList">Rating:</label>
+                    <Select name="ratingList"
                             value={this.state.selectedRating}
                             onChange={this.ratingSelected}
                             options={this.state.ratings}
@@ -149,8 +164,8 @@ export default class MovieForm extends React.Component {
                             />
                 </div>
                 <div className="form-group">
-                    <label className="control-label" htmlFor="genre">Genres:</label>
-                    <Select name="genre"
+                    <label className="control-label" htmlFor="genreList">Genres:</label>
+                    <Select name="genreList"
                             multi
                             value={this.state.selectedGenres}
                             onChange={this.genreSelected}

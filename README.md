@@ -638,20 +638,24 @@ Lets hook up a form to add/edit movies
 ```
 npm i --save-dev style-loader css-loader
 npm i --save react-select-plus
+npm i --save nodemon
 ```
 1. Add loaders required for CCS files being imported
 2. Add a single and multi-select control
+3. Some people mentioned nodemon when I gave a talk about this....
 
 ```json
 "scripts": {
   "start": "supervisor -w routes -w db ./bin/www",
   "build": "webpack --progrss --colors",
-  "webpack": "webpack --progress --colors --watch"
+  "webpack": "webpack --progress --colors --watch",
+  "nodemon": "nodemon ./bin/www"
 },
 ```
 1. Have supervisor watch **routes** and **db** directories
 2. add colors etc to webpack build
 3. add a new webpack that watches for changes
+4. add a new nodemon start
 
 Lets create a new form to handle input of a movie and its details.
 ```javascript
@@ -871,9 +875,16 @@ static propTypes = {
     onValueChange: React.PropTypes.func.isRequired,
     format: React.PropTypes.func,
 };
+static defaultProps = {
+    value: '0',
+    step: 1,
+    format: (x) => x,
+    min: Number.MIN_SAFE_INTEGER,
+    max: Number.MAX_SAFE_INTEGER,
+};
 ```
-The above is a way to ensure that the correct types are passed for our props, and that
-required properties are always passed.
+The above is a way to ensure that the correct types are passed for our props, that
+required properties are always passed, and that properties have valid defaults.
 
 ```javascript
 static defaultProps = {
@@ -990,7 +1001,7 @@ I am going to refactor the file a little.
 /* eslint-disable no-param-reassign */
 const express = require('express');
 const router = express.Router();
-const CircularJSON = require('circular-json');
+const CircularJSON = require('circular-json'); // eslint-disable-line no-unused-vars
 
 const {SqlQuery, SqlBuilder} = require('fluent-sql');
 const {executeSimpleQuery, executeInsert, executeUpdate, executeDelete} = require('../db/database');
@@ -1005,6 +1016,7 @@ function getGenre(theMovie) {
                     .from(genre)
                     .select(genre.name)
                     .join(movie_genre.on(movie_genre.genreId).using(genre.id))
+                    .select(movie_genre.genreId)
                     .where(movie_genre.movieId.eq(theMovie.id));
     return executeSimpleQuery(query)
             .then(data => {
@@ -1014,9 +1026,10 @@ function getGenre(theMovie) {
 function getMovies() {
     const query = new SqlQuery()
                         .from(movie)
-                        .select(movie.id, movie.title, movie.duration)
+                        .select(movie.id, movie.title, movie.duration, movie.movieRatingId)
                         .join(movie_rating.on(movie_rating.id).using(movie.movieRatingId))
-                        .select(movie_rating.ratingCode);
+                        .select(movie_rating.ratingCode)
+                        .orderBy(movie.title);
     return executeSimpleQuery(query)
                 .then((data) => {
                     const promises = data.map(movie => {
@@ -1150,8 +1163,6 @@ router.patch('/:id', (req, res, next) => {
 router.delete('/:id', (req, res, next) => {
     const deleteMovie = SqlBuilder.delete(movie, {id: req.params.id});
     const deleteRatings = SqlBuilder.delete(movie_genre, {movieId: req.params.id});
-    console.log(CircularJSON.stringify(deleteMovie, null, 2));
-    console.log(CircularJSON.stringify(deleteRatings, null, 2));
     executeDelete(deleteRatings)
         .then(() => {
             return executeDelete(deleteMovie);
@@ -1167,4 +1178,233 @@ router.delete('/:id', (req, res, next) => {
 });
 
 module.exports = router;
+```
+
+1. setup propTypes
+2. setup defaultProps
+3. add an action to state, defaulted to ADD
+4. Add componentWillReceiveProps
+  * this will get called with the newProps
+  * we need to update the state with the new props
+  * if we have a title, assume we will be updating (action = 'UPDATE')
+5. implement the save
+  * gather up the data
+  * action
+    * ADD - POST the data to the server
+    * UPDATE - PATCH the data to the server
+
+```javascript
+// client/components/movie-form.js
+static propTypes = {
+    onChanges: React.PropTypes.func.isRequired,
+    title: React.PropTypes.string,
+    duration: React.PropTypes.number,
+    genres: React.PropTypes.array,
+    rating: React.PropTypes.number,
+};
+static defaultProps = {
+    genres: [],
+    title: '',
+    duration: 0,
+};
+constructor() {
+    super();
+    this.state = {
+        title: '',
+        duration: 0,
+        ratings: [],
+        genres: [],
+        selectedRating: null,
+        selectedGenres: [],
+        action: 'ADD',
+    };
+}
+componentWillReceiveProps(newProps) {
+    const selectedRating = this.state.ratings.find((i) => (i.value === newProps.movieRatingId));
+    const selectedGenres = newProps.genres.map((g => {
+        return this.state.genres.find((genre) => (g.genreId === genre.value));
+    }));
+    this.setState({
+        title: newProps.title,
+        duration: newProps.duration,
+        selectedRating,
+        selectedGenres,
+        action: newProps.title ? 'UPDATE' : 'ADD',
+    });
+}
+...
+save = () => {
+    const movie = {
+        title: this.state.title,
+        duration: this.state.duration,
+        movieRatingId: this.state.selectedRating.value,
+        genres: this.state.selectedGenres.map(g => g.value),
+    };
+
+    let verb;
+    if ( this.state.action === 'ADD') {
+        verb = 'POST';
+    } else if ( this.state.action === 'UPDATE') {
+        verb = 'PATCH';
+    }
+    fetch('http://localhost:3000/movie', {
+        method: verb,
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(movie),
+    })
+    .then(() => {
+        this.props.onChanges();
+        this.clear();
+    })
+    .catch(err => {
+        alert(err);
+    });
+};
+```
+move the initial fill of the page into the movie-list.js file.
+```javascript
+// client/client.js
+/* eslint-disable no-unused-vars */
+import React from 'react';
+import ReactDOM from 'react-dom';
+import MovieList from './components/movie-list';
+
+ReactDOM.render(<MovieList />, document.getElementById('container'));
+```
+
+My list was getting big and forcing me to scroll the page, which made me loose
+the form, do lets make the div scrollable and set the height to 75% of the client
+area.
+Lets change the movie-list now.
+1. get the dimensions of the window so we can make our list scrollable
+2. subscribe to the window resizing event
+  * subscribe in componentDidMount
+  * unsubscribe in componentWillUnmount
+3. Add a method to fetch the movies and save them into the state
+4. Add a method to handle a movie clicked
+5. Pass the currently selected movie to the form
+6. Tell the currently selected movie-info it is selected
+```javascript
+// client/components/movie-list.js
+import React from 'react';
+import MovieInfo from './movie-info';
+import MovieForm from './movie-form';
+
+export default class MovieList extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            movies: [],
+            movie: {},
+            width: 0,
+            height: 0,
+        };
+    }
+    componentWillMount() {
+        this.updateDimensions();
+    }
+    componentDidMount() {
+        this.moviesUpdated();
+        window.addEventListener('resize', this.updateDimensions);
+    }
+    componentWillUnmount() {
+        window.removeEventListener('resize', this.updateDimensions);
+    }
+    updateDimensions = () => {
+        const w = window;
+        const d = document;
+        const documentElement = d.documentElement;
+        const body = d.getElementsByTagName('body')[0];
+        const width = w.innerWidth || documentElement.clientWidth || body.clientWidth;
+        const height = w.innerHeight || documentElement.clientHeight || body.clientHeight;
+        this.setState({width, height});
+    }
+    moviesUpdated = () => {
+        fetch('http://localhost:3000/movie', {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+        .then(data => {
+            return data.json();
+        })
+        .then(json => {
+            this.setState({movies: json});
+        });
+        this.setState({movie: null});
+    };
+    movieClicked = (movie) => {
+        console.log('movieClicked', movie);
+        this.setState({movie});
+    }
+    render() {
+        const listStyle = {
+            overflowY: 'auto',
+            height: `${this.state.height * 0.75}px`,
+        };
+        return (
+            <div className="row">
+                <div className="col-md-6">
+                    <MovieForm {...this.state.movie} onChanges={this.moviesUpdated}/>
+                </div>
+                <div className="col-md-6" style={listStyle}>
+                    {
+                        this.state.movies.map((movie, idx) => {
+                            const selected = this.state.movie ? (movie.id === this.state.movie.id) : false;
+                            return (
+                                <MovieInfo movie={movie} key={`movie-${idx}`} selected={selected} onClick={this.movieClicked}/>
+                            );
+                        })
+                    }
+                </div>
+            </div>
+        );
+    }
+}
+```
+```javascript
+<MovieForm {...this.state.movie} onChanges={this.moviesUpdated}/>
+```
+The above line will create a property for every member of movie for MovieForm using the ES6 spread opperator (...)
+
+Now make some changes to the **movie-info** to display the selected item differently
+```javascript
+// client/components/movie-info.js
+import React from 'react';
+
+export default class MovieInfo extends React.Component {
+    onClick = () => {
+        console.log('clicked');
+        this.props.onClick(this.props.movie);
+    };
+    render() {
+        const className = `panel ${this.props.selected ? 'panel-primary' : 'panel-default'}`;
+        console.log(className);
+        return (
+            <div className={className}>
+                <div className="panel-heading" onClick={this.onClick}>
+                    {this.props.movie.title}
+                </div>
+                <div className="panel-body">
+                    {`Rating: ${this.props.movie.ratingCode} genres: `}
+                    {
+                        this.props.movie.genres.map(g => g.name).join(',')
+                    }
+                </div>
+            </div>
+        );
+    }
+}
+```
+
+at this point I made a change to the webpack.config.js file to have better error messages
+**devtool** to source-map so errors should relate to the original javascript file
+```javascript
+module.exports = {
+    devtool: 'source-map',
+    entry: ['./client/client.js'],
 ```

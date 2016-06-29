@@ -2,6 +2,7 @@
 const path = require('path');
 
 module.exports = {
+    devtool: 'source-map',
     entry: ['./client/client.js'],
     output: {
         path: path.resolve(__dirname, 'client/dist'),
