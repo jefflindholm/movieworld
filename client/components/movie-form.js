@@ -1,6 +1,7 @@
 // client/components/movie-form.js
 import React from 'react';
 import Select from 'react-select-plus';
+import {Modal} from 'react-bootstrap';
 import NumberInput from '../controls/number-input';
 import 'react-select-plus/dist/react-select-plus.css';
 import 'fluent-sql/dist/string';
@@ -21,8 +22,8 @@ export default class MovieForm extends React.Component {
     constructor() {
         super();
         this.state = {
-            title: '',
-            duration: 0,
+            movieTitle: '',
+            movieDuration: 0,
             ratings: [],
             genres: [],
             selectedRating: null,
@@ -36,11 +37,12 @@ export default class MovieForm extends React.Component {
             return this.state.genres.find((genre) => (g.genreId === genre.value));
         }));
         this.setState({
-            title: newProps.title,
-            duration: newProps.duration,
+            movieTitle: newProps.title,
+            movieDuration: newProps.duration,
             selectedRating,
             selectedGenres,
-            action: newProps.title ? 'UPDATE' : 'ADD',
+            action: newProps.action || 'ADD',
+            showModal: newProps.showModal,
         });
     }
     componentDidMount() {
@@ -77,8 +79,8 @@ export default class MovieForm extends React.Component {
     }
     save = () => {
         const movie = {
-            title: this.state.title,
-            duration: this.state.duration,
+            title: this.state.movieTitle,
+            duration: this.state.movieDuration,
             movieRatingId: this.state.selectedRating.value,
             genres: this.state.selectedGenres.map(g => g.value),
         };
@@ -101,20 +103,27 @@ export default class MovieForm extends React.Component {
         })
         .then(() => {
             this.props.onChanges();
-            this.clear();
+            this.setState({showModal: false});
         })
         .catch(err => {
             alert(err);
         });
     };
-    clear = () => {
-        this.setState({
-            title: '',
-            duration: 0,
-            rating: null,
-            selectedRating: null,
-            selectedGenres: [],
-            action: 'ADD',
+    delete = () => {
+        const url = `http://localhost:3000/movie/${this.props.id}`;
+        fetch(url, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(() => {
+            this.props.onChanges();
+            this.setState({showModal: false});
+        })
+        .catch(err => {
+            alert(err);
         });
     }
     handleInputChange = (e) => {
@@ -133,55 +142,68 @@ export default class MovieForm extends React.Component {
     genreSelected = (val) => {
         this.setState({selectedGenres: val});
     };
+    close = () => {
+        this.setState({showModal: false});
+    }
     render() {
         return (
-            <div className="form">
-                <div className="form-group">
-                    <label className="control-label" htmlFor="movieTitle">Title:</label>
-                    <input type="text"
-                            className="form-control"
-                            id="movieTitle"
-                            name="movieTitle"
-                            value={this.state.title}
-                            onChange={this.handleInputChange}
-                            placeholder="Enter Movie Title" />
-                </div>
-                <div className="form-group">
-                    <label className="control-label" htmlFor="movieDuration">Duration:</label>
-                    <NumberInput
-                        id="movieDuration"
-                        name="movieDuration"
-                        className="form-control"
-                        min={0}
-                        value={this.state.duration}
-                        onChange={this.handleInputChange}
-                        onValueChange={this.valueChange}
-                        placeholder="Minutes" />
-                </div>
-                <div className="form-group">
-                    <label className="control-label" htmlFor="ratingList">Rating:</label>
-                    <Select name="ratingList"
-                            value={this.state.selectedRating}
-                            onChange={this.ratingSelected}
-                            options={this.state.ratings}
-                            placeholder="Select rating"
-                            />
-                </div>
-                <div className="form-group">
-                    <label className="control-label" htmlFor="genreList">Genres:</label>
-                    <Select name="genreList"
-                            multi
-                            value={this.state.selectedGenres}
-                            onChange={this.genreSelected}
-                            options={this.state.genres}
-                            placeholder="Select genre(s)"
-                            />
-                </div>
-                <div className="form-group">
-                    <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>{this.state.action.toLowerCase().capitalizeFirst()}</button>
-                    <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.clear}>Clear</button>
-                </div>
-            </div>
+            <Modal show={this.state.showModal} onHide={this.close}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{this.state.title || 'New Movie'}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <div className="form">
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="movieTitle">Title:</label>
+                            <input type="text"
+                                    className="form-control"
+                                    id="movieTitle"
+                                    name="movieTitle"
+                                    value={this.state.movieTitle}
+                                    onChange={this.handleInputChange}
+                                    placeholder="Enter Movie Title" />
+                        </div>
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="movieDuration">Duration:</label>
+                            <NumberInput
+                                id="movieDuration"
+                                name="movieDuration"
+                                className="form-control"
+                                min={0}
+                                value={this.state.movieDuration}
+                                onChange={this.handleInputChange}
+                                onValueChange={this.valueChange}
+                                placeholder="Minutes" />
+                        </div>
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="ratingList">Rating:</label>
+                            <Select name="ratingList"
+                                    value={this.state.selectedRating}
+                                    onChange={this.ratingSelected}
+                                    options={this.state.ratings}
+                                    placeholder="Select rating"
+                                    />
+                        </div>
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="genreList">Genres:</label>
+                            <Select name="genreList"
+                                    multi
+                                    value={this.state.selectedGenres}
+                                    onChange={this.genreSelected}
+                                    options={this.state.genres}
+                                    placeholder="Select genre(s)"
+                                    />
+                        </div>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <div className="form-group">
+                        <button style={{marginRight: '10px'}} className="btn btn-default pull-left" onClick={this.delete}>Delete</button>
+                        <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>{this.state.action.toLowerCase().capitalizeFirst()}</button>
+                        <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.close}>Cancel</button>
+                    </div>
+                </Modal.Footer>
+            </Modal>
         );
     }
 }

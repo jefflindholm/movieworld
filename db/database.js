@@ -1,10 +1,10 @@
 /* eslint-disable comma-dangle */
 const config = require('./config');
 const Sequelize = require('sequelize');
-const CircularJSON = require('circular-json');
+const CircularJSON = require('circular-json'); // eslint-disable-line no-unused-vars
 const {setDefaultOptions} = require('fluent-sql');
 
-const debug = true;
+const debug = false;
 
 const database = new Sequelize(config.database,
     config.user,

@@ -123,6 +123,7 @@ router.patch('/:id', (req, res, next) => {
     let promise;
     if ( data.title || data.duration || data.movieRatingId ) {
         const updateMovie = SqlBuilder.update(movie, data);
+        console.log(CircularJSON.stringify(updateMovie, null, 2));
         promise = executeUpdate(updateMovie)
                 .then(() => {
                     if ( req.body.genres ) {

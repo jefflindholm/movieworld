@@ -2,6 +2,6 @@
 /* eslint-disable no-unused-vars */
 import React from 'react';
 import ReactDOM from 'react-dom';
-import MovieList from './components/movie-list';
+import Movies from './components/movies';
 
-ReactDOM.render(<MovieList />, document.getElementById('container'));
+ReactDOM.render(<Movies />, document.getElementById('container'));

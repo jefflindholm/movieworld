@@ -62,16 +62,24 @@ Add some genre(s) to the movies on your own.....
 # STEP-ONE
 
 ```
-npm i express express-generator
+npm i -g express express-generator
 mkdir movieworld
 cd movieworld
 express . -f
 npm i
+```
+```
 npm i --save-dev supervisor
+```
+**or**
+```
+npm i --save-dev nodemon
 ```
 
 edit package.json - change node to
-supervisor in "start": "node ./bin/www"
+supervisor/nodemon in "start": "node ./bin/www"
+
+Which ever you chose to install. (I mentioned this in step-six as well since this is an evolving doc)
 
 ```
 npm start
@@ -810,7 +818,7 @@ that adds the following to string
  * toPascal - same as toCamel except returns **SomeString**
  * trim - removes spaces from begin and end
  * contains - boolean for whether or not string has passed value
- 
+
 It will only add a method that does not exist on String
 
 I used a new control NumberInput, so now lets create that control.
@@ -1425,3 +1433,21 @@ module.exports = {
     devtool: 'source-map',
     entry: ['./client/client.js'],
 ```
+
+# STEP-SEVEN
+
+1. npm i --save react-bootstrap
+2. add movie components
+3. move code from movie-list to #1
+4. change client to use #1
+5. turn movie form into a modal dialog
+6. add delete to the form
+7. add edit to the list of movies
+8. add movie detail page
+9. add propTypes to movie-list, movie-info
+10. lets try to get the movie from IMDB
+11. npm i --save node-fetch
+12. create imdb route (routes/imdb.js)
+13. add to app.js
+14. make call ti get details on the detail page
+15. call out to the imdb website
