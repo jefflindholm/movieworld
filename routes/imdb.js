@@ -23,22 +23,6 @@ function fetch(host, path, cb, err) {
     request.end();
 }
 
-// function dataFromImdb(movie, cb, err) {
-//     const host = 'www.imdb.com';
-//     const path = `/xml/find?json=1&nr=1&tt=on&q=${encodeURIComponent(movie)}`;
-//     fetch(host, path, data => {
-//         if (data.title_exact) {
-//             cb(data.title_exact);
-//         } else if ( data.title_popular) {
-//             cb(data.title_popular);
-//         } else {
-//             cb(data);
-//         }
-//     }, e => {
-//         err(`${movie} was not found`);
-//     });
-// }
-
 router.get('/', (req, res, next) => {
     if ( req.query.movie ) {
         console.log('searching for', req.query.movie);

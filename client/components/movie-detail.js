@@ -10,6 +10,7 @@ export default class MovieDetail extends React.Component {
             title: movie.title || MovieDetail.NOTHING_SELECTED,
             genres: movie.genres || [],
             ratingCode: movie.ratingCode || MovieDetail.NO_RATING_SELECTED,
+            details: {Search:[]},
         };
     }
     componentWillReceiveProps(newProps) {
@@ -31,20 +32,45 @@ export default class MovieDetail extends React.Component {
                 return data.json();
             })
             .then(json => {
+                console.log('json', json);
                 this.setState({details: json});
             });
         }
     }
+    renderDetails() {
+        if ( this.state.details && this.state.details.Search ) {
+            const posters = this.state.details.Search.map(detail => {
+                if ( detail.Poster && detail.Type === 'movie' && detail.Title.toLowerCase() === this.state.title.toLowerCase() ) {
+                    return (
+                        <img src={detail.Poster} key={detail.imdbID}/>
+                    );
+                } else {
+                    return '';
+                }
+            });
+            return posters;
+        }
+        return <div></div>;
+    }
     render() {
+        const listStyle = {
+            overflowY: 'auto',
+            height: `${this.props.height.slice(0, -2) * 0.85}px`,
+        };
+        console.log('listStyle', listStyle);
         let body;
         if ( this.state.title !== MovieDetail.NOTHING_SELECTED ) {
             body = (
                 <div className="panel-body">
-                    {`Rating: ${this.state.ratingCode} genres: `}
-                    {
-                        this.state.genres.map(g => g.name).join(',')
-                    }
-                    { JSON.stringify(this.state.details, null, 2) }
+                    <div>
+                        {`Rating: ${this.state.ratingCode} genres: `}
+                        {
+                            this.state.genres.map(g => g.name).join(',')
+                        }
+                    </div>
+                    <div style={listStyle}>
+                        { this.renderDetails() }
+                    </div>
                 </div>
             );
         } else {

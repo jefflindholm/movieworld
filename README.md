@@ -1,3 +1,11 @@
+# Links
+**react cheat sheets**
+ * http://ricostacruz.com/cheatsheets/react.html
+ * http://reactcheatsheet.com/
+
+**ES6 Stuff**
+ * http://www.2ality.com/2015/08/getting-started-es6.html?utm_source=javascriptweekly&utm_medium=email
+
 # Database setup
 This assumes you are using Postgres and using the command line (psql) to create the Database
 ```sql
@@ -1435,19 +1443,540 @@ module.exports = {
 ```
 
 # STEP-SEVEN
+```
+npm i --save react-bootstrap
+```
+Add a new component called movies
+Move code from movie-list.js into this
+```javascript
+// client/components/movies.js
+import React from 'react';
+import MovieList from './movie-list';
+import MovieForm from './movie-form';
+import MovieDetail from './movie-detail';
 
-1. npm i --save react-bootstrap
-2. add movie components
-3. move code from movie-list to #1
-4. change client to use #1
-5. turn movie form into a modal dialog
-6. add delete to the form
-7. add edit to the list of movies
-8. add movie detail page
-9. add propTypes to movie-list, movie-info
-10. lets try to get the movie from IMDB
-11. npm i --save node-fetch
-12. create imdb route (routes/imdb.js)
-13. add to app.js
-14. make call ti get details on the detail page
-15. call out to the imdb website
+export default class Movies extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            movies: [],
+            movie: {},
+            width: 0,
+            height: 0,
+            showModal: false,
+        };
+    }
+    componentWillMount() {
+        this.updateDimensions();
+    }
+    componentDidMount() {
+        this.moviesUpdated();
+        window.addEventListener('resize', this.updateDimensions);
+    }
+    componentWillUnmount() {
+        window.removeEventListener('resize', this.updateDimensions);
+    }
+    updateDimensions = () => {
+        const w = window;
+        const d = document;
+        const documentElement = d.documentElement;
+        const body = d.getElementsByTagName('body')[0];
+        const width = w.innerWidth || documentElement.clientWidth || body.clientWidth;
+        const height = w.innerHeight || documentElement.clientHeight || body.clientHeight;
+        this.setState({width, height});
+    }
+    movieClicked = (movie) => {
+        this.setState({movie, showModal: false});
+    };
+    movieEdit = (movie) => {
+        this.setState({movie, showModal: true});
+    };
+    moviesUpdated = () => {
+        this.setState({showModal: false});
+        fetch('http://localhost:3000/movie', {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+        .then(data => {
+            return data.json();
+        })
+        .then(json => {
+            this.setState({movies: json});
+        });
+        this.setState({movie: null});
+    };
+    addMovie = () => {
+        this.setState({showModal: true});
+    };
+    closeModal = () => {
+        this.setState({showModal: false});
+    }
+    render() {
+        const listStyle = {
+            overflowY: 'auto',
+            height: `${this.state.height * 0.75}px`,
+            // border: '1px',
+            // borderStyle: 'solid',
+            // borderColor: 'blue'
+        };
+
+        return (
+            <div className="row">
+                <div className="col-md-6">
+                    <MovieDetail movie={this.state.movie} height={`${this.state.height * 0.75}px`} />
+                </div>
+                <div className="col-md-6">
+                    <div style={listStyle}>
+                        <MovieList movies={this.state.movies} movieClicked={this.movieClicked} selectedMovie={this.state.movie} movieEdit={this.movieEdit} />
+                    </div>
+                    <button style={{width: '100%', marginTop: '10px'}} className="btn btn-default" onClick={this.addMovie}>Add a movie</button>
+                </div>
+                <MovieForm {...this.state.movie} onChanges={this.moviesUpdated} onClose={this.closeModal} showModal={this.state.showModal} action={this.state.movie ? 'UPDATE' : 'ADD'}/>
+            </div>
+        );
+    }
+}
+```
+
+movie-list becomes much more focused
+```javascript
+// client/components/movie-list.js
+import React from 'react';
+import MovieInfo from './movie-info';
+
+export default class MovieList extends React.Component {
+    static propTypes = {
+        movieClicked: React.PropTypes.func.isRequired,
+        movieEdit: React.PropTypes.func.isRequired,
+    };
+    render() {
+        return (
+            <div>
+                {
+                    this.props.movies.map((movie, idx) => {
+                        const selected = this.props.selectedMovie ? (movie.id === this.props.selectedMovie.id) : false;
+                        return (
+                            <MovieInfo movie={movie} key={`movie-${idx}`} selected={selected} onClick={this.props.movieClicked} onEdit={this.props.movieEdit}/>
+                        );
+                    })
+                }
+            </div>
+        );
+    }
+}
+```
+
+change client.js to create an instance of movies
+```javascript
+// client/client.js
+/* eslint-disable no-unused-vars */
+import React from 'react';
+import ReactDOM from 'react-dom';
+import Movies from './components/movies';
+
+ReactDOM.render(<Movies />, document.getElementById('container'));
+```
+
+Change movie-form.js into a modal dialog, using the Modal control/component from react-bootstrap
+Also add a delete to the form.
+```javascript
+// client/components/movie-form.js
+import React from 'react';
+import Select from 'react-select-plus';
+import {Modal} from 'react-bootstrap';
+import NumberInput from '../controls/number-input';
+import 'react-select-plus/dist/react-select-plus.css';
+import 'fluent-sql/dist/string';
+
+export default class MovieForm extends React.Component {
+    static propTypes = {
+        onChanges: React.PropTypes.func.isRequired,
+        title: React.PropTypes.string,
+        duration: React.PropTypes.number,
+        genres: React.PropTypes.array,
+        rating: React.PropTypes.number,
+    };
+    static defaultProps = {
+        genres: [],
+        title: '',
+        duration: 0,
+    };
+    constructor() {
+        super();
+        this.state = {
+            movieTitle: '',
+            movieDuration: 0,
+            ratings: [],
+            genres: [],
+            selectedRating: null,
+            selectedGenres: [],
+            action: 'ADD',
+        };
+    }
+    componentWillReceiveProps(newProps) {
+        const selectedRating = this.state.ratings.find((i) => (i.value === newProps.movieRatingId));
+        const selectedGenres = newProps.genres.map((g => {
+            return this.state.genres.find((genre) => (g.genreId === genre.value));
+        }));
+        this.setState({
+            movieTitle: newProps.title,
+            movieDuration: newProps.duration,
+            selectedRating,
+            selectedGenres,
+            action: newProps.action || 'ADD',
+            showModal: newProps.showModal,
+        });
+    }
+    componentDidMount() {
+        fetch('http://localhost:3000/movie_rating', {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+        .then(data => {
+            return data.json();
+        })
+        .then(json => {
+            const ratings = json.map(rating => {
+                return {label: `${rating.ratingCode} - ${rating.description}`, value: rating.id};
+            });
+            this.setState({ratings});
+        });
+        fetch('http://localhost:3000/genre', {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+        .then(data => {
+            return data.json();
+        })
+        .then(json => {
+            const genres = json.map(genre => {
+                return {label: genre.name, value: genre.id};
+            });
+            this.setState({genres});
+        });
+    }
+    save = () => {
+        const movie = {
+            title: this.state.movieTitle,
+            duration: this.state.movieDuration,
+            movieRatingId: this.state.selectedRating.value,
+            genres: this.state.selectedGenres.map(g => g.value),
+        };
+
+        let verb;
+        let url = 'http://localhost:3000/movie';
+        if ( this.state.action === 'ADD') {
+            verb = 'POST';
+        } else if ( this.state.action === 'UPDATE') {
+            verb = 'PATCH';
+            url = `${url}/${this.props.id}`;
+        }
+        fetch(url, {
+            method: verb,
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(movie),
+        })
+        .then(() => {
+            this.props.onChanges();
+            this.setState({showModal: false});
+        })
+        .catch(err => {
+            alert(err);
+        });
+    };
+    delete = () => {
+        const url = `http://localhost:3000/movie/${this.props.id}`;
+        fetch(url, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(() => {
+            this.props.onChanges();
+            this.setState({showModal: false});
+        })
+        .catch(err => {
+            alert(err);
+        });
+    }
+    handleInputChange = (e) => {
+        e.preventDefault();
+        const name = e.target.name;
+        const newState = Object.assign({}, this.state);
+        newState[name] = e.target.value;
+        this.setState(newState);
+    };
+    valueChange = (val) => {
+        this.setState({duration: val});
+    };
+    ratingSelected = (val) => {
+        this.setState({selectedRating: val});
+    };
+    genreSelected = (val) => {
+        this.setState({selectedGenres: val});
+    };
+    close = () => {
+        this.setState({showModal: false});
+    }
+    render() {
+        return (
+            <Modal show={this.state.showModal} onHide={this.close}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{this.state.title || 'New Movie'}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <div className="form">
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="movieTitle">Title:</label>
+                            <input type="text"
+                                    className="form-control"
+                                    id="movieTitle"
+                                    name="movieTitle"
+                                    value={this.state.movieTitle}
+                                    onChange={this.handleInputChange}
+                                    placeholder="Enter Movie Title" />
+                        </div>
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="movieDuration">Duration:</label>
+                            <NumberInput
+                                id="movieDuration"
+                                name="movieDuration"
+                                className="form-control"
+                                min={0}
+                                value={this.state.movieDuration}
+                                onChange={this.handleInputChange}
+                                onValueChange={this.valueChange}
+                                placeholder="Minutes" />
+                        </div>
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="ratingList">Rating:</label>
+                            <Select name="ratingList"
+                                    value={this.state.selectedRating}
+                                    onChange={this.ratingSelected}
+                                    options={this.state.ratings}
+                                    placeholder="Select rating"
+                                    />
+                        </div>
+                        <div className="form-group">
+                            <label className="control-label" htmlFor="genreList">Genres:</label>
+                            <Select name="genreList"
+                                    multi
+                                    value={this.state.selectedGenres}
+                                    onChange={this.genreSelected}
+                                    options={this.state.genres}
+                                    placeholder="Select genre(s)"
+                                    />
+                        </div>
+                    </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <div className="form-group">
+                        <button style={{marginRight: '10px'}} className="btn btn-default pull-left" onClick={this.delete}>Delete</button>
+                        <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>{this.state.action.toLowerCase().capitalizeFirst()}</button>
+                        <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.close}>Cancel</button>
+                    </div>
+                </Modal.Footer>
+            </Modal>
+        );
+    }
+}
+```
+
+Add an edit button the the movie-info.js
+```javascript
+// client/components/movie-info.js
+import React from 'react';
+
+export default class MovieInfo extends React.Component {
+    static propTypes = {
+        onClick: React.PropTypes.func.isRequired,
+        onEdit: React.PropTypes.func.isRequired,
+    };
+    onClick = () => {
+        this.props.onClick(this.props.movie);
+    };
+    onEdit = () => {
+        this.props.onEdit(this.props.movie);
+    }
+    render() {
+        const className = `panel ${this.props.selected ? 'panel-primary' : 'panel-default'}`;
+        return (
+            <div className={className}>
+                <div className="panel-heading" onClick={this.onClick}>
+                    {this.props.movie.title}
+                </div>
+                <div className="panel-body">
+                    {`Rating: ${this.props.movie.ratingCode} genres: `}
+                    {
+                        this.props.movie.genres.map(g => g.name).join(',')
+                    }
+                    <button style={{marginRight: '10px'}} className="btn btn-default pull-right" onClick={this.onEdit}>Edit</button>
+                </div>
+            </div>
+        );
+    }
+}
+```
+
+so now we can get some more information from the internet.
+create and imdb route (imdb has an undocumented api, but omdbapi.com is open and free) the data coming
+from omdbapi was causing node-fetch problems so I wrote my own quick and dirty fetch
+```javascript
+// routes/imdb.js
+const express = require('express');
+const router = express.Router();
+const http = require('http');
+
+function fetch(host, path, cb, err) {
+    const options = { host, path };
+    const request = http.request(options, response => {
+        let data = '';
+        response.on('data', chunk => {
+            data += chunk;
+        });
+        response.on('end', () => {
+            const obj = JSON.parse(data);
+            console.log(JSON.stringify(obj, null, 2));
+            cb(obj);
+        });
+    });
+    request.on('error', e => {
+        console.log(e.message);
+        err('nothing found');
+    });
+    request.end();
+}
+
+router.get('/', (req, res, next) => {
+    if ( req.query.movie ) {
+        console.log('searching for', req.query.movie);
+        const url = `http://www.omdbapi.com/?s=${encodeURIComponent(req.query.movie)}`;
+        console.log(url);
+        const host = 'www.omdbapi.com';
+        const path = `/?s=${encodeURIComponent(req.query.movie)}`;
+        fetch(host, path, data => {
+            res.send(data);
+        }, e => {
+            next(e);
+        });
+    } else {
+        res.status(404).send('please add a movie');
+    }
+});
+
+module.exports = router;
+```
+Add the new route to app.js
+```javascript
+//app.js
+...
+const imdb = require('./routes/imdb');
+...
+app.use('/imdb', imdb);
+...
+```
+
+Create a detail movie page, to display extra information we get from the internet about the movie.
+Just going to show the movie poster this time....
+```javascript
+import React from 'react';
+
+export default class MovieDetail extends React.Component {
+    static NOTHING_SELECTED = 'Nothing selected...';
+    static NO_RATING_SELECTED = 'No rating';
+    constructor(props) {
+        super(props);
+        const movie = props.movie || {};
+        this.state = {
+            title: movie.title || MovieDetail.NOTHING_SELECTED,
+            genres: movie.genres || [],
+            ratingCode: movie.ratingCode || MovieDetail.NO_RATING_SELECTED,
+            details: {Search:[]},
+        };
+    }
+    componentWillReceiveProps(newProps) {
+        const movie = newProps.movie || {};
+        const title = movie.title || MovieDetail.NOTHING_SELECTED;
+        this.setState({
+            title,
+            genres: movie.genres || [],
+            ratingCode: movie.ratingCode || MovieDetail.NO_RATING_SELECTED,
+        });
+        if ( title !== MovieDetail.NOTHING_SELECTED ) {
+            fetch(`http://localhost:3000/imdb?movie=${encodeURIComponent(title)}`, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                },
+            })
+            .then(data => {
+                return data.json();
+            })
+            .then(json => {
+                console.log('json', json);
+                this.setState({details: json});
+            });
+        }
+    }
+    renderDetails() {
+        if ( this.state.details && this.state.details.Search ) {
+            const posters = this.state.details.Search.map(detail => {
+                if ( detail.Poster && detail.Type === 'movie' && detail.Title.toLowerCase() === this.state.title.toLowerCase() ) {
+                    return (
+                        <img src={detail.Poster} key={detail.imdbID}/>
+                    );
+                } else {
+                    return '';
+                }
+            });
+            return posters;
+        }
+        return <div></div>;
+    }
+    render() {
+        const listStyle = {
+            overflowY: 'auto',
+            height: `${this.props.height.slice(0, -2) * 0.85}px`,
+        };
+        console.log('listStyle', listStyle);
+        let body;
+        if ( this.state.title !== MovieDetail.NOTHING_SELECTED ) {
+            body = (
+                <div className="panel-body">
+                    <div>
+                        {`Rating: ${this.state.ratingCode} genres: `}
+                        {
+                            this.state.genres.map(g => g.name).join(',')
+                        }
+                    </div>
+                    <div style={listStyle}>
+                        { this.renderDetails() }
+                    </div>
+                </div>
+            );
+        } else {
+            body = '';
+        }
+
+        return (
+            <div className='panel panel-info' style={{height: this.props.height}}>
+                <div className="panel-heading">
+                    {this.state.title}
+                </div>
+                {body}
+            </div>
+        );
+    }
+}
+```
