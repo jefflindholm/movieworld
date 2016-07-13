@@ -1980,3 +1980,14 @@ export default class MovieDetail extends React.Component {
     }
 }
 ```
+
+# Security fix
+
+```
+npm i helmet
+```
+Make a change to app.js
+```javascript
+require('helmet');
+app.use(helment.hidePoweredBy());
+```
