@@ -2,7 +2,11 @@ import {dispatch, listen} from '../dispatcher';
 import {receiveMovies} from '../actions/movie-actions';
 
 export default class MovieStore {
-    let movies = [];
+    constructor() {
+        super();
+        this.movies = [];
+        this.listeners = [];
+    }
     getMovies() {
         fetch('http://localhost:3000/movie', {
             method: 'GET',
@@ -14,15 +18,14 @@ export default class MovieStore {
             return data.json();
         })
         .then(json => {
-            movies = json;
+            this.movies = json;
             this.triggerChange();
         });
     }
-    const listeners = [];
     onChange(listener) {
-        listeners.push(listener);
+        this.listeners.push(listener);
     }
     addMovie(movie) {
-        
+
     }
 }
