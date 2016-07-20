@@ -24,7 +24,7 @@ export default class MovieInfo extends React.Component {
                     {
                         this.props.movie.genres.map(g => g.name).join(',')
                     }
-                    <button style={{marginRight: '10px'}} className="btn btn-default pull-right" onClick={this.onEdit}>Edit</button>
+                    <button style={{ marginRight: '10px' }} className="btn btn-default pull-right" onClick={this.onEdit}>Edit</button>
                 </div>
             </div>
         );

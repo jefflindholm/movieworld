@@ -1,10 +1,10 @@
 // client/components/movie-form.js
-import React from 'react';
-import Select from 'react-select-plus';
-import {Modal} from 'react-bootstrap';
-import NumberInput from '../controls/number-input';
 import 'react-select-plus/dist/react-select-plus.css';
 import 'fluent-sql/dist/string';
+import React from 'react';
+import Select from 'react-select-plus';
+import { Modal } from 'react-bootstrap';
+import NumberInput from '../controls/number-input';
 
 export default class MovieForm extends React.Component {
     static propTypes = {
@@ -33,9 +33,7 @@ export default class MovieForm extends React.Component {
     }
     componentWillReceiveProps(newProps) {
         const selectedRating = this.state.ratings.find((i) => (i.value === newProps.movieRatingId));
-        const selectedGenres = newProps.genres.map((g => {
-            return this.state.genres.find((genre) => (g.genreId === genre.value));
-        }));
+        const selectedGenres = newProps.genres.map(g => this.state.genres.find((genre) => (g.genreId === genre.value)));
         this.setState({
             movieTitle: newProps.title,
             movieDuration: newProps.duration,
@@ -52,14 +50,10 @@ export default class MovieForm extends React.Component {
                 Accept: 'application/json',
             },
         })
-        .then(data => {
-            return data.json();
-        })
+        .then(data => data.json)
         .then(json => {
-            const ratings = json.map(rating => {
-                return {label: `${rating.ratingCode} - ${rating.description}`, value: rating.id};
-            });
-            this.setState({ratings});
+            const ratings = json.map(rating => ({ label: `${rating.ratingCode} - ${rating.description}`, value: rating.id }));
+            this.setState({ ratings });
         });
         fetch('http://localhost:3000/genre', {
             method: 'GET',
@@ -67,14 +61,10 @@ export default class MovieForm extends React.Component {
                 Accept: 'application/json',
             },
         })
-        .then(data => {
-            return data.json();
-        })
+        .then(data => data.json)
         .then(json => {
-            const genres = json.map(genre => {
-                return {label: genre.name, value: genre.id};
-            });
-            this.setState({genres});
+            const genres = json.map(genre => ({ label: genre.name, value: genre.id }));
+            this.setState({ genres });
         });
     }
     save = () => {
@@ -103,7 +93,7 @@ export default class MovieForm extends React.Component {
         })
         .then(() => {
             this.props.onChanges();
-            this.setState({showModal: false});
+            this.setState({ showModal: false });
         })
         .catch(err => {
             alert(err);
@@ -120,7 +110,7 @@ export default class MovieForm extends React.Component {
         })
         .then(() => {
             this.props.onChanges();
-            this.setState({showModal: false});
+            this.setState({ showModal: false });
         })
         .catch(err => {
             alert(err);
@@ -134,18 +124,19 @@ export default class MovieForm extends React.Component {
         this.setState(newState);
     };
     valueChange = (val) => {
-        this.setState({duration: val});
+        this.setState({ duration: val });
     };
     ratingSelected = (val) => {
-        this.setState({selectedRating: val});
+        this.setState({ electedRating: val });
     };
     genreSelected = (val) => {
-        this.setState({selectedGenres: val});
+        this.setState({ selectedGenres: val });
     };
     close = () => {
-        this.setState({showModal: false});
+        this.setState({ showModal: false });
     }
     render() {
+        const buttonStyle = { marginRight: '10px' };
         return (
             <Modal show={this.state.showModal} onHide={this.close}>
                 <Modal.Header closeButton>
@@ -198,9 +189,9 @@ export default class MovieForm extends React.Component {
                 </Modal.Body>
                 <Modal.Footer>
                     <div className="form-group">
-                        <button style={{marginRight: '10px'}} className="btn btn-default pull-left" onClick={this.delete}>Delete</button>
-                        <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.save}>{this.state.action.toLowerCase().capitalizeFirst()}</button>
-                        <button style={{marginRight: '10px'}} className="btn btn-default" onClick={this.close}>Cancel</button>
+                        <button style={buttonStyle} className="btn btn-default pull-left" onClick={this.delete}>Delete</button>
+                        <button style={buttonStyle} className="btn btn-default" onClick={this.save}>{this.state.action.toLowerCase().capitalizeFirst()}</button>
+                        <button style={buttonStyle} className="btn btn-default" onClick={this.close}>Cancel</button>
                     </div>
                 </Modal.Footer>
             </Modal>

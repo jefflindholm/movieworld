@@ -19,13 +19,11 @@ export default class NumberInput extends React.Component {
     };
     onKeyDown = (e) => {
         if (e.which === 38) {
-            console.log('up');
             // UP
             e.preventDefault();
             const value = Math.min(this.props.value + this.props.step, this.props.max);
             this.props.onValueChange(value);
         } else if (e.which === 40) {
-            console.log('down');
             // DOWN
             e.preventDefault();
             const value = Math.max(this.props.value - this.props.step, this.props.min);

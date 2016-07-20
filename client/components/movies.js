@@ -32,35 +32,31 @@ export default class Movies extends React.Component {
         const body = d.getElementsByTagName('body')[0];
         const width = w.innerWidth || documentElement.clientWidth || body.clientWidth;
         const height = w.innerHeight || documentElement.clientHeight || body.clientHeight;
-        this.setState({width, height});
+        this.setState({ width, height });
     }
     movieClicked = (movie) => {
-        this.setState({movie, showModal: false});
+        this.setState({ movie, showModal: false });
     };
     movieEdit = (movie) => {
-        this.setState({movie, showModal: true});
+        this.setState({ movie, showModal: true });
     };
     moviesUpdated = () => {
-        this.setState({showModal: false});
+        this.setState({ showModal: false });
         fetch('http://localhost:3000/movie', {
             method: 'GET',
             headers: {
                 Accept: 'application/json',
             },
         })
-        .then(data => {
-            return data.json();
-        })
-        .then(json => {
-            this.setState({movies: json});
-        });
-        this.setState({movie: null});
+        .then(data => data.json())
+        .then(json => this.setState({ movies: json }));
+        this.setState({ movie: null });
     };
     addMovie = () => {
-        this.setState({showModal: true});
+        this.setState({ showModal: true });
     };
     closeModal = () => {
-        this.setState({showModal: false});
+        this.setState({ showModal: false });
     }
     render() {
         const listStyle = {
@@ -80,7 +76,7 @@ export default class Movies extends React.Component {
                     <div style={listStyle}>
                         <MovieList movies={this.state.movies} movieClicked={this.movieClicked} selectedMovie={this.state.movie} movieEdit={this.movieEdit} />
                     </div>
-                    <button style={{width: '100%', marginTop: '10px'}} className="btn btn-default" onClick={this.addMovie}>Add a movie</button>
+                    <button style={{ width: '100%', marginTop: '10px' }} className="btn btn-default" onClick={this.addMovie}>Add a movie</button>
                 </div>
                 <MovieForm {...this.state.movie} onChanges={this.moviesUpdated} onClose={this.closeModal} showModal={this.state.showModal} action={this.state.movie ? 'UPDATE' : 'ADD'}/>
             </div>

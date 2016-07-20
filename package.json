@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "supervisor -w routes -w db ./bin/www",
-    "build": "webpack --progrss --colors",
+    "build": "webpack --progress --colors",
     "webpack": "webpack --progress --colors --watch",
     "nodemon": "nodemon ./bin/www"
   },
@@ -31,8 +31,8 @@
     "serve-favicon": "~2.3.0"
   },
   "devDependencies": {
-    "babel-cli": "^6.10.1",
-    "babel-core": "^6.10.4",
+    "babel-cli": "^6.11.4",
+    "babel-core": "^6.11.4",
     "babel-eslint": "^6.1.0",
     "babel-loader": "^6.2.4",
     "babel-preset-es2015": "^6.9.0",
@@ -40,7 +40,9 @@
     "babel-preset-stage-0": "^6.5.0",
     "css-loader": "^0.23.1",
     "eslint": "^3.1.1",
+    "eslint-config-airbnb-base": "^4.0.2",
     "eslint-loader": "^1.3.0",
+    "eslint-plugin-import": "^1.11.1",
     "eslint-plugin-react": "^5.2.2",
     "style-loader": "^0.13.1",
     "supervisor": "^0.11.0",

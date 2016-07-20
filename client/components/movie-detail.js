@@ -10,7 +10,7 @@ export default class MovieDetail extends React.Component {
             title: movie.title || MovieDetail.NOTHING_SELECTED,
             genres: movie.genres || [],
             ratingCode: movie.ratingCode || MovieDetail.NO_RATING_SELECTED,
-            details: {Search:[]},
+            details: { Search: [] },
         };
     }
     componentWillReceiveProps(newProps) {
@@ -28,12 +28,10 @@ export default class MovieDetail extends React.Component {
                     Accept: 'application/json',
                 },
             })
-            .then(data => {
-                return data.json();
-            })
+            .then(data => data.json)
             .then(json => {
                 console.log('json', json);
-                this.setState({details: json});
+                this.setState({ details: json });
             });
         }
     }
@@ -44,9 +42,8 @@ export default class MovieDetail extends React.Component {
                     return (
                         <img src={detail.Poster} key={detail.imdbID}/>
                     );
-                } else {
-                    return '';
                 }
+                return '';
             });
             return posters;
         }
@@ -78,7 +75,7 @@ export default class MovieDetail extends React.Component {
         }
 
         return (
-            <div className='panel panel-info' style={{height: this.props.height}}>
+            <div className='panel panel-info' style={{ height: this.props.height }}>
                 <div className="panel-heading">
                     {this.state.title}
                 </div>
